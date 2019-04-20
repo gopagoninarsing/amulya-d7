@@ -1,0 +1,4 @@
+name = Amulya Hospital
+description = Custom MOdule for the Amulya Hospital
+core = 7.x
+project = "amulya_hospital"

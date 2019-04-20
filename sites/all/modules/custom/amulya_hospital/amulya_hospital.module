@@ -1,0 +1,89 @@
+<?php
+
+function amulya_hospital_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'bills_node_form') {
+     $value = fetch_last_bill_number();
+     $form['todays_date']["#markup"] = "<div class='bill-info-wrapper'>".
+     				     "<div class = 'info-right-field'><b>Bill NO:</b> ". $value ." </div>".
+     				     "<div class = 'info-left-field'><b>Bill Date:</b> ". date("d-m-Y")." </div>".
+
+					 "<div style='clear:both'></div></div>";
+     $form['field_bill_number']['und'][0]['value']["#default_value"] = $value;
+
+     $form['field_patient_name']['und'][0]["#prefix"] = "<div style='float:left'>";
+     $form['field_patient_name']['und'][0]["#suffix"] = "</div>";
+
+     $form['field_age']['und'][0]["#prefix"] = "<div style='float:left'>";
+     $form['field_age']['und'][0]["#suffix"] = "</div>";
+
+     $form['field_patient_mobile']['und'][0]["#prefix"] = "<div style='float:left'>";
+     $form['field_patient_mobile']['und'][0]["#suffix"] = "</div><div style='clear:both'></div>";
+    }
+}
+
+function fetch_last_bill_number() {
+  $sql = "select max(field_bill_number_value) from field_data_field_bill_number";
+  $value = db_query($sql)->fetchField();
+  return ($value > 0)?($value+1):1;
+}
+
+function bill_investigation_lists($entity_id) {
+  $sql = "select (select title from node where nid = field_bill_service_target_id) as service, field_service_total_price_value as total, field_bill_quantity_value as qty from field_data_field_bill_services fbs LEFT JOIN field_data_field_bill_service fb on fb.entity_id = fbs.field_bill_services_value LEFT JOIN field_data_field_service_total_price fstp on fstp.entity_id = fbs.field_bill_services_value LEFT JOIN field_data_field_bill_quantity fbq on fbq.entity_id = fbs.field_bill_services_value where fbs.entity_id = :nid and fbs.bundle = 'bills'";
+
+  $results = db_query($sql, array(":nid" => $entity_id))->fetchAll();
+  $values = array();
+  foreach ($results as $row) {
+    $values[] = array("service" => $row->service, "qty" => $row->qty, "total" => $row->total);
+  }
+  return $values;
+}
+
+
+function numberTowords($num) {
+  $ones = array(1 => "One", 2 => "Two", 3 => "Three", 4 => "four",
+              5 => "Five", 6 => "Six", 7 => "Seven", 8 => "Eight",
+              9 => "Nine", 10 => "Ten", 11 => "Eleven", 12 => "Twelve",
+              13 => "Thirteen", 14 => "Fourteen", 15 => "Fifteen",16 => "Sixteen",
+              17 => "Seventeen", 18 => "Eighteen", 19 => "Nineteen"
+  );
+  $tens = array( 1 => "Ten", 2 => "Twenty", 3 => "Thirty",
+                 4 => "Forty", 5 => "Fifty", 6 => "Sixty", 7 => "Seventy",
+                 8 => "Eighty",9 => "Ninety"   );
+  $hundreds = array("Hundred", "Thousand", "Ten Thousand", "Lakh", "Ten Lakhs"); //limit t quadrillion
+  $num = number_format($num,2,".",",");
+  $num_arr = explode(".",$num);
+  $wholenum = $num_arr[0];
+  $decnum = $num_arr[1];
+  $whole_arr = array_reverse(explode(",",$wholenum));
+  krsort($whole_arr);
+  $rettxt = "";
+  foreach($whole_arr as $key => $i) {
+    if ($i < 20) {
+      $rettxt .= $ones[$i];
+    }
+    elseif ($i < 100) {
+      $rettxt .= $tens[substr($i,0,1)];
+      $rettxt .= " ".$ones[substr($i,1,1)];
+    }
+    else {
+      $rettxt .= $ones[substr($i,0,1)]." ".$hundreds[0];
+      $rettxt .= " ".$tens[substr($i,1,1)];
+      $rettxt .= " ".$ones[substr($i,2,1)];
+    }
+    if($key > 0) {
+      $rettxt .= " ".$hundreds[$key]." ";
+    }
+  }
+  if($decnum > 0) {
+    $rettxt .= " and ";
+    if($decnum < 20){
+      $rettxt .= $ones[$decnum];
+    }
+    elseif ($decnum < 100){
+      $rettxt .= $tens[substr($decnum,0,1)];
+      $rettxt .= " ".$ones[substr($decnum,1,1)];
+    }
+  }
+  return $rettxt;
+}
+
